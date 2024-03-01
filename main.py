@@ -1,18 +1,18 @@
 import uuid
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, relationship
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import DeclarativeBase, relationship, Session
 from sqlalchemy import (Column, Uuid, String, DateTime, func, DECIMAL, Integer, Boolean, ForeignKey)
 
 
-motor = create_engine("sqlite+pysqlite://banco_de_dados.sqlite",
-                      echo=True)
+motor = create_engine("sqlite+pysqlite:///banco_de_dados.sqlite", echo=True)
+
 
 class Base(DeclarativeBase):
     pass
 
 
-class DatasMixin():
+class DatasMixin:
     dta_cadastro = Column(DateTime, server_default=func.now(), nullable=False)
     dta_atualizacao = Column(DateTime, onupdate=func.now(), default=func.now(), nullable=False)
 
@@ -34,4 +34,24 @@ class Produto(Base, DatasMixin):
     ativo = Column(Boolean, default=True)
     categoria_id = Column(Uuid(as_uuid=True), ForeignKey('tbl_categorias.id'))
 
-    categoria = relationship(Categoria, back_populates="lista_de_produtos")
+    categoria = relationship("Categoria", back_populates="lista_de_produtos")
+
+
+cat = Categoria()
+cat.nome = "Bebidas"
+
+prod = Produto()
+prod.nome = "Coca cola zero, 2L"
+prod.ativo = True
+prod.preco = 9.50
+prod.estoque = 100
+prod.categoria = cat
+
+with Session(motor) as sessao:
+    sessao.add(prod)
+    sessao.commit()
+
+with Session(motor) as sessao:
+    lista_de_categorias = sessao.execute(select(Categoria)).scalars()
+    for categoria in lista_de_categorias:
+        print(f"A categoria {categoria.nome} tem {len(categoria.lista_de_produtos)} produtos")
