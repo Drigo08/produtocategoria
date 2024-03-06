@@ -36,22 +36,38 @@ class Produto(Base, DatasMixin):
 
     categoria = relationship("Categoria", back_populates="lista_de_produtos")
 
+def seed_database():
+    from seed import seed_data
+    with Session(motor) as sessao:
+        registro = sessao.execute(select(Categoria).limit(1)).scalars()
+        if registro:
+            return
+        from seed import seed_data
+        for categoria in seed_data:
+            cat = Categoria()
+            print(f"Semeando a categoria {categoria['categoria']}...")
+            cat.nome = categoria["categoria"]
+            for produto in categoria["produtos"]:
+                p = Produto()
+                p.nome = produto["nome"]
+                p.preco = produto["preco"]
+                p.estoque = 0
+                p.ativo = True
+                p.categoria = cat
+                sessao.add(p)
+            sessao.commit()
+            print(f"Categorias {nome} adicionada.")
 
-cat = Categoria()
-cat.nome = "Bebidas"
+def incluir_categoria():
+    print("Incluindo cateforia")
+    nome = input("Qual o nome da categoria que você quer adicionar? ")
+    with Session(motor) as sessao:
 
-prod = Produto()
-prod.nome = "Coca cola zero, 2L"
-prod.ativo = True
-prod.preco = 9.50
-prod.estoque = 100
-prod.categoria = cat
-
-with Session(motor) as sessao:
-    sessao.add(prod)
-    sessao.commit()
-
-with Session(motor) as sessao:
-    lista_de_categorias = sessao.execute(select(Categoria)).scalars()
-    for categoria in lista_de_categorias:
-        print(f"A categoria {categoria.nome} tem {len(categoria.lista_de_produtos)} produtos")
+if __name__ == "__main__":
+    seed_database()
+    while True:
+        print("Menu de opcoes")
+        print("1. Incluir Categoria")
+        print("0. Sair")
+        opcao = int(input("Qual opcao? "))
+        if opcao == 1:
